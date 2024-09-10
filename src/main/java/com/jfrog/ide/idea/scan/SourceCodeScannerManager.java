@@ -12,8 +12,10 @@ import com.jfrog.ide.common.nodes.VulnerabilityNode;
 import com.jfrog.ide.common.nodes.subentities.SourceCodeScanType;
 import com.jfrog.ide.idea.configuration.GlobalSettings;
 import com.jfrog.ide.idea.inspections.JFrogSecurityWarning;
+import com.jfrog.ide.idea.log.Analytics;
 import com.jfrog.ide.idea.log.Logger;
 import com.jfrog.ide.idea.log.ProgressIndicatorImpl;
+import com.jfrog.ide.idea.log.ScanEventStatus;
 import com.jfrog.ide.idea.scan.data.PackageManagerType;
 import com.jfrog.ide.idea.scan.data.ScanConfig;
 import com.jfrog.ide.idea.scan.data.applications.JFrogApplicationsConfig;
@@ -118,6 +120,7 @@ public class SourceCodeScannerManager {
      * Launch async source code scans.
      */
     void asyncScanAndUpdateResults(ExecutorService executor, Logger log) {
+
         // If intellij is still indexing the project, do not scan.
         if (DumbService.isDumb(project)) {
             return;
@@ -125,6 +128,8 @@ public class SourceCodeScannerManager {
         // The tasks run asynchronously. To make sure no more than 3 tasks are running concurrently,
         // we use a count-down latch that signals to that executor service that it can get more tasks.
         CountDownLatch latch = new CountDownLatch(1);
+
+
         Task.Backgroundable sourceCodeScanTask = new Task.Backgroundable(null, "Advanced source code scanning") {
             @Override
             public void run(@NotNull com.intellij.openapi.progress.ProgressIndicator indicator) {
@@ -143,6 +148,7 @@ public class SourceCodeScannerManager {
                     logError(Logger.getInstance(), "Failed to run advanced source code scanning.", e, true);
                 }
             }
+
 
             @Override
             public void onFinished() {
@@ -176,9 +182,23 @@ public class SourceCodeScannerManager {
 
     private void scan(ModuleConfig moduleConfig, ProgressIndicator indicator, Runnable checkCanceled, Logger log) {
         double fraction = 0;
+        String multiScanID = null;
+        Analytics analytics = new Analytics();
+        try {
+            multiScanID = analytics.startScan();
+        }
+        catch(Error | IOException | InterruptedException err) {
+            log.debug("no msi received, not activating XSC");
+        }
+
+        boolean isScanSuccesfull = true;
+        Integer totalFindings = 0;
+
+
         for (SourceCodeScanType scannerType : scanners.keySet()) {
             checkCanceled.run();
             ScanBinaryExecutor scanner = scanners.get(scannerType);
+            scanner.setMultiScanId(multiScanID);
             ScannerConfig scannerConfig = null;
             if (moduleConfig != null) {
                 // Skip the scanner If requested.
@@ -193,13 +213,17 @@ public class SourceCodeScannerManager {
             }
             try {
                 List<JFrogSecurityWarning> scanResults = scanner.execute(createBasicScannerInput(moduleConfig, scannerConfig), checkCanceled, indicator);
+                totalFindings+= scanResults.toArray().length;
                 addSourceCodeScanResults(scanner.createSpecificFileIssueNodes(scanResults));
             } catch (IOException | URISyntaxException | InterruptedException e) {
+                isScanSuccesfull = false;
                 logError(log, "", e, true);
             }
             fraction += 1.0 / scanners.size();
             indicator.setFraction(fraction);
         }
+
+        analytics.endScan(isScanSuccesfull, totalFindings, 0 , multiScanID);
     }
 
     private JFrogApplicationsConfig parseJFrogApplicationsConfig() throws IOException {

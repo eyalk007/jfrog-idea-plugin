@@ -11,9 +11,11 @@ import com.jfrog.ide.idea.configuration.ServerConfigImpl;
 import com.jfrog.ide.idea.inspections.JFrogSecurityWarning;
 import com.jfrog.ide.idea.log.Logger;
 import com.jfrog.ide.idea.scan.data.*;
+import com.jfrog.ide.idea.utils.Utils;
 import com.jfrog.xray.client.Xray;
 import com.jfrog.xray.client.services.entitlements.Feature;
 import lombok.Getter;
+import lombok.Setter;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.UnzipParameters;
@@ -58,12 +60,12 @@ public abstract class ScanBinaryExecutor {
     private static final int USER_NOT_ENTITLED = 31;
     private static final int NOT_SUPPORTED = 13;
     private static final String SCANNER_BINARY_NAME = "analyzerManager";
-    private static final String SCANNER_BINARY_VERSION = "1.8.14";
-    private static final String BINARY_DOWNLOAD_URL = "xsc-gen-exe-analyzer-manager-local/v1/" + SCANNER_BINARY_VERSION;
+    private static final String BINARY_DOWNLOAD_URL = "xsc-gen-exe-analyzer-manager-local/v1/" + Utils.getAnalyzerManagerVersion();
     private static final String DOWNLOAD_SCANNER_NAME = "analyzerManager.zip";
     private static final String MINIMAL_XRAY_VERSION_SUPPORTED_FOR_ENTITLEMENT = "3.66.0";
     private static final String ENV_PLATFORM = "JF_PLATFORM_URL";
     private static final String ENV_USER = "JF_USER";
+    private static final String ENV_MSI = "JF_MSI";
     private static final String ENV_PASSWORD = "JF_PASS";
     private static final String ENV_ACCESS_TOKEN = "JF_TOKEN";
     private static final String ENV_HTTP_PROXY = "HTTP_PROXY";
@@ -79,6 +81,8 @@ public abstract class ScanBinaryExecutor {
     private final Log log;
     private boolean notSupported;
     private final static Object downloadLock = new Object();
+    @Setter
+    private String multiScanId = null;
 
     ScanBinaryExecutor(SourceCodeScanType scanType, Log log) {
         this.scanType = scanType;
@@ -149,6 +153,7 @@ public abstract class ScanBinaryExecutor {
             }
 
             Logger log = Logger.getInstance();
+
             // The following logging is done outside the commandExecutor because the commandExecutor log level is set to INFO.
             //  As it is an internal binary execution, the message should be printed for DEBUG use only.
             indicator.setText(String.format("Running %s scan at %s", scanType.toString().toLowerCase(), String.join(" ", inputParams.getRoots())));
@@ -320,6 +325,7 @@ public abstract class ScanBinaryExecutor {
         } else {
             env.put(ENV_USER, serverConfig.getUsername());
             env.put(ENV_PASSWORD, serverConfig.getPassword());
+            env.put(ENV_MSI,this.multiScanId);
         }
 
         ProxyConfiguration proxyConfiguration = serverConfig.getProxyConfForTargetUrl(serverConfig.getUrl());

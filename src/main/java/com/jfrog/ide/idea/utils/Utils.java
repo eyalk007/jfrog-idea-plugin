@@ -40,7 +40,9 @@ public class Utils {
 
     public static final Path HOME_PATH = Paths.get(System.getProperty("user.home"), ".jfrog-idea-plugin");
     public static final String PRODUCT_ID = "jfrog-idea-plugin";
+    public static final String AM_VERSION = "1.8.14";
     public static final String PLUGIN_ID = "org.jfrog.idea";
+    public static String connectedArtifactoryVersion = null;
 
     public static Path getProjectBasePath(Project project) {
         return project.getBasePath() != null ? Paths.get(project.getBasePath()) : Paths.get(".");
@@ -54,11 +56,31 @@ public class Utils {
                 StringUtils.equals(lhsGeneralInfo.getPkgType(), rhsGeneralInfo.getPkgType());
     }
 
+    public static void setArtifactoryVersion(String artifactoryVersion){
+       connectedArtifactoryVersion = artifactoryVersion;
+    }
+
+    public static String getAnalyzerManagerVersion(){
+        return AM_VERSION;
+    }
+
     public static void focusJFrogToolWindow(Project project) {
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("JFrog");
         if (toolWindow != null) {
             toolWindow.activate(null);
         }
+    }
+
+    public static String getPluginName(){
+        return PLUGIN_ID;
+    }
+
+    public static String getPluginVersion(){
+        IdeaPluginDescriptor jfrogPlugin = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID));
+        if (jfrogPlugin == null) {
+            return null;
+        }
+        return jfrogPlugin.getVersion();
     }
 
     public static void sendUsageReport(String techName) {

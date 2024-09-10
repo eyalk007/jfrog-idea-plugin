@@ -9,6 +9,7 @@ import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.ui.HyperlinkLabel;
 import com.intellij.ui.components.*;
 import com.intellij.util.Time;
+import com.jfrog.ide.idea.utils.Utils;
 import com.intellij.util.ui.AsyncProcessIcon;
 import com.jfrog.ide.common.configuration.ServerConfig;
 import com.jfrog.ide.common.utils.XrayConnectionUtils;
@@ -28,6 +29,7 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.jdesktop.swingx.JXCollapsiblePane;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
+import org.jfrog.build.client.ArtifactoryVersion;
 import org.jfrog.build.client.ProxyConfiguration;
 import org.jfrog.build.extractor.clientConfiguration.ArtifactoryManagerBuilder;
 import org.jfrog.build.extractor.clientConfiguration.client.access.AccessManager;
@@ -341,6 +343,7 @@ public class JFrogGlobalConfiguration implements Configurable, Configurable.NoSc
         try {
             Xray xrayClient = createXrayClient(url);
 
+
             setConnectionResults("Connecting to Xray...");
             connectionDetails.validate();
             connectionDetails.repaint();
@@ -387,9 +390,13 @@ public class JFrogGlobalConfiguration implements Configurable, Configurable.NoSc
             // Check connection.
             // This command will throw an exception if there is a connection or credentials issue.
             artifactoryManager.searchArtifactsByAql(createAqlForBuildArtifacts("*", "artifactory-build-info"));
+            ArtifactoryVersion currentArtifactoryVersion = artifactoryManager.getVersion();
 
-            return "Successfully connected to Artifactory version: " + artifactoryManager.getVersion();
+            Utils.setArtifactoryVersion(currentArtifactoryVersion.toString());
+            return "Successfully connected to Artifactory version: " + currentArtifactoryVersion;
+
         } catch (Exception exception) {
+            Utils.setArtifactoryVersion("");
             return "Could not connect to JFrog Artifactory.";
         }
     }
