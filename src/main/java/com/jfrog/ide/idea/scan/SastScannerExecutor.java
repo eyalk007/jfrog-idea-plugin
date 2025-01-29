@@ -46,7 +46,7 @@ public class SastScannerExecutor extends ScanBinaryExecutor {
                 results.put(warning.getFilePath(), fileNode);
             }
 
-            FileIssueNode issueNode = new SastIssueNode(warning.getRuleID(),
+            FileIssueNode issueNode = new SastIssueNode(warning.getReason(),
                     warning.getFilePath(), warning.getLineStart(), warning.getColStart(), warning.getLineEnd(), warning.getColEnd(),
                     warning.getScannerSearchTarget(), warning.getLineSnippet(), warning.getCodeFlows(), warning.getSeverity(), warning.getRuleID());
             fileNode.addIssue(issueNode);
